@@ -263,7 +263,7 @@ public class MainActivity extends Activity {
         s.setSaveFormData(false);
         s.setSavePassword(false);
         s.setGeolocationEnabled(false);
-        s.setAppCacheEnabled(false);
+        s.//setAppCacheEnabled(false);
         s.setDatabaseEnabled(false);
         applyUA();
     }
