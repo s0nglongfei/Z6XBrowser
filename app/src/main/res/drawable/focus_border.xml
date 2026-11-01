@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- 遥控器焦点红框：在网页元素间移动时高亮当前选中项 -->
+    <stroke
+        android:width="3dp"
+        android:color="#FF3B30" />
+    <solid android:color="#00000000" />
+</shape>

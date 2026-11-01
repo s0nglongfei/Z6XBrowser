@@ -1,0 +1,33 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.z6x.browser'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.z6x.browser"
+        minSdk 21                 // NEW Z6X 实测 Android 8.0(API 26)，21 可向下兼容安装
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+        // 老芯片只打 32 位包，避免 arm64 装不上
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false    // 关闭混淆，方便排错
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+// 零外部依赖：只用 Android SDK 原生 API，编译无需下载 androidx，成功率最高
+dependencies {
+}
