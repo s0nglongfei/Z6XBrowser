@@ -125,30 +125,27 @@ FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
 web.setLayoutParams(params);
 root.addView(web); // 加到主布局里
 // 解决网页无法打开/自定义协议报错
+// 解决网页无法打开/自定义协议报错
 web.setWebViewClient(new WebViewClient() {
     
-    // 新版拦截方法（Android 7.0+ 会走这里）
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         String url = request.getUrl().toString();
         if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常加载网页
+            return false; // 正常网页放行
         }
-        // 忽略其他自定义协议（如 baiduboxapp://）
+        // 其他乱七八糟的协议直接拦截，不加载
         return true; 
     }
     
-    // 旧版拦截方法（兼容旧系统）
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
         if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常加载网页
+            return false; // 正常网页放行
         }
-        // 忽略其他自定义协议（如 baiduboxapp://）
-        return true; 
+        return true; // 直接拦截
     }
 });
-
 
 // 设置焦点和触摸弹键盘
 web.setFocusable(true);
