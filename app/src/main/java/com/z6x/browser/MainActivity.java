@@ -123,6 +123,23 @@ FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
 );
 web.setLayoutParams(params);
 root.addView(web); // 加到主布局里
+// 解决网页无法打开/自定义协议报错
+web.setWebViewClient(new WebViewClient() {
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return false; // 正常加载网页
+        }
+        // 忽略其他自定义协议（如 baiduboxapp://）
+        return true; 
+    }
+});
+
+// 设置焦点和触摸弹键盘
+web.setFocusable(true);
+web.setFocusableInTouchMode(true);
+// ... 后面的代码保持不变
+
 
 // 设置焦点和触摸弹键盘
 web.setFocusable(true);
