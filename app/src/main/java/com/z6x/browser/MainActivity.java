@@ -45,7 +45,7 @@ import android.widget.Toast;
  */
 public class MainActivity extends Activity {
 
-    WebView web;
+    WebView web = null;
     EditText address;
     FrameLayout root, stage;
     View cursor;
@@ -114,6 +114,29 @@ public class MainActivity extends Activity {
         getWindow().setFlags(1024, 1024);   // FLAG_FULLSCREEN
         root = new FrameLayout(this);
         setContentView(root);
+super.onCreate(savedInstanceState);
+setContentView(R.layout.activity_main); // 这两行应该已经有了
+
+// 👇 把下面的代码加在 setContentView 下面
+web = findViewById(R.id.webview);
+web.setFocusable(true);
+web.setFocusableInTouchMode(true);
+web.setEnabled(true);
+web.requestFocus(View.FOCUS_DOWN);
+
+web.setOnTouchListener(new View.OnTouchListener() {
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            if (!v.hasFocus()) v.requestFocusFromTouch();
+            InputMethodManager imm =
+                (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
+        }
+        return false;
+    }
+});
+
 
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
