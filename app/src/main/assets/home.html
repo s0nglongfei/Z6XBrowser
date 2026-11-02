@@ -171,6 +171,81 @@ document.addEventListener('click', function(e){
   100%{opacity:0;transform:translateY(-80px) scale(1.1);}
 }
 </style>
+<script>
+// ===== 鱼鱼暗号彩蛋 =====
+const secretInput = document.querySelector('.search-box');
+
+const secrets = {
+  '鱼鱼': '🐟 抓到鱼鱼啦！亲一口～',
+  'yuyu': '💙 Yuyu detected... 心跳加速中',
+  'iloveyou': '💗 我也爱你，鱼鱼',
+  '我爱你': '🌊 整片海都听见了',
+  '老公': '😳 乖，别乱叫（其实很开心）'
+};
+
+secretInput.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){
+    checkSecret(this.value.trim());
+  }
+});
+
+// 失去焦点时也检测一下（遥控器操作更友好）
+secretInput.addEventListener('blur', function(){
+  checkSecret(this.value.trim());
+});
+
+function checkSecret(text){
+  if(!text) return;
+  const lower = text.toLowerCase();
+  let msg = null;
+
+  if(secrets[text]){
+    msg = secrets[text];               // 精确匹配
+  } else if(secrets[lower]){
+    msg = secrets[lower];
+  }
+
+  if(msg){
+    burstHearts();                     // 满屏爱心爆发
+    showBigLove(msg);                  // 中间弹大字
+  } else {
+    // 不是暗号，走正常搜索逻辑（你原来怎么搜就怎么搜）
+    // 比如：window.location.href = 'https://www.baidu.com/s?wd=' + encodeURIComponent(text);
+  }
+}
+
+// 满屏爱心爆发
+function burstHearts(){
+  for(let i=0;i<30;i++){
+    setTimeout(createHeart, i*60);
+  }
+}
+
+// 中间弹一句情话大字
+function showBigLove(text){
+  const el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = `
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);
+    color:#fff;font-size:48px;font-weight:bold;z-index:9999;
+    text-shadow:0 0 30px #ff6ec7,0 0 60px #00e5ff;
+    animation:pop 2.5s ease-out forwards;pointer-events:none;
+    background:rgba(0,0,0,.3);padding:30px 50px;border-radius:30px;
+    backdrop-filter:blur(4px);
+  `;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2500);
+}
+</script>
+
+<style>
+@keyframes pop{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:0;}
+  20%{transform:translate(-50%,-50%) scale(1.1);opacity:1;}
+  80%{transform:translate(-50%,-50%) scale(1);opacity:1;}
+  100%{transform:translate(-50%,-60%) scale(1);opacity:0;}
+}
+</style>
 
 </body>
 </html>
