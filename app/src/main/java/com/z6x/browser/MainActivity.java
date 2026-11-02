@@ -116,40 +116,6 @@ public class MainActivity extends Activity {
         getWindow().setFlags(1024, 1024);   // FLAG_FULLSCREEN
         root = new FrameLayout(this);
         setContentView(root);
-// 动态创建 WebView
-web = new WebView(this);
-FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-    FrameLayout.LayoutParams.MATCH_PARENT,
-    FrameLayout.LayoutParams.MATCH_PARENT
-);
-web.setLayoutParams(params);
-root.addView(web); // 加到主布局里
-// 解决网页无法打开/自定义协议报错
-// 解决网页无法打开/自定义协议报错
-    
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-        String url = request.getUrl().toString();
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常网页放行
-        }
-        // 其他乱七八糟的协议直接拦截，不加载
-        return true; 
-    }
-    
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常网页放行
-        }
-        return true; // 直接拦截
-    }
-});
-
-// 设置焦点和触摸弹键盘
-web.setFocusable(true);
-web.setFocusableInTouchMode(true);
-// ... 后面的代码保持不变
 
 
 // 设置焦点和触摸弹键盘
