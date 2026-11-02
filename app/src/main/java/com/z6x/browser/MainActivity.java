@@ -126,7 +126,6 @@ web.setLayoutParams(params);
 root.addView(web); // 加到主布局里
 // 解决网页无法打开/自定义协议报错
 // 解决网页无法打开/自定义协议报错
-web.setWebViewClient(new WebViewClient() {
     
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -240,9 +239,34 @@ web.setOnTouchListener(new View.OnTouchListener() {
         setupWebViewSettings();
 
         web.setWebViewClient(new WebViewClient() {
-            public void onPageFinished(WebView v, String url) { address.setText(url); }
-            public boolean shouldOverrideUrlLoading(WebView v, String url) { return false; }
-        });
+    public void onPageFinished(WebView v, String url) {
+        address.setText(url);
+        // 主页时隐藏顶栏，全屏展示
+        if ("file:///android_asset/home.html".equals(url)) {
+            bar.setVisibility(View.GONE);
+        } else {
+            bar.setVisibility(View.VISIBLE);
+        }
+    }
+    
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        String url = request.getUrl().toString();
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return false; // 正常网页放行
+        }
+        return true; // 其他协议拦截
+    }
+    
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return false; // 正常网页放行
+        }
+        return true; // 其他协议拦截
+    }
+});
+
 
         web.setWebChromeClient(new WebChromeClient() {
             public void onShowCustomView(View view, CustomViewCallback cb) {
@@ -301,8 +325,8 @@ web.setOnTouchListener(new View.OnTouchListener() {
         // ---------- 内置键盘 ----------
         buildKeyboard(main);
 
-        web.loadUrl("https://www.example.com");
-        web.setFocusable(false);
+        web.loadUrl("file:///android_asset/home.html");
+
         hideIME();
         updateIncognitoButton();
         updateUAButton();
