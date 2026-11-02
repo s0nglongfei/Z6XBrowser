@@ -28,6 +28,7 @@ import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Context;
 
 /**
  * Z6X / NEW Z6X 专用网页浏览器
@@ -114,11 +115,16 @@ public class MainActivity extends Activity {
         getWindow().setFlags(1024, 1024);   // FLAG_FULLSCREEN
         root = new FrameLayout(this);
         setContentView(root);
-super.onCreate(savedInstanceState);
-setContentView(R.layout.activity_main); // 这两行应该已经有了
+// 动态创建 WebView
+web = new WebView(this);
+FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+    FrameLayout.LayoutParams.MATCH_PARENT,
+    FrameLayout.LayoutParams.MATCH_PARENT
+);
+web.setLayoutParams(params);
+root.addView(web); // 加到主布局里
 
-// 👇 把下面的代码加在 setContentView 下面
-web = findViewById(R.id.webview);
+// 设置焦点和触摸弹键盘
 web.setFocusable(true);
 web.setFocusableInTouchMode(true);
 web.setEnabled(true);
@@ -136,6 +142,7 @@ web.setOnTouchListener(new View.OnTouchListener() {
         return false;
     }
 });
+
 
 
         LinearLayout main = new LinearLayout(this);
