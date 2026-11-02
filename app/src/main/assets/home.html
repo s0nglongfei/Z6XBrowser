@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>给鱼鱼的浏览器</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;}
+  
+  body{
+    background:linear-gradient(180deg,#020b1a 0%,#0a2a43 40%,#0d3b5e 70%,#0a1f3a 100%);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+
+  body::before{
+    content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+    background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,.15) 0%,transparent 60%);
+    pointer-events:none;
+  }
+
+  .container{
+    position:relative;z-index:10;text-align:center;
+    animation:fadeIn 2s ease;
+    width:100%;padding:0 40px;
+  }
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+  .title{
+    font-size:72px;font-weight:bold;
+    background:linear-gradient(135deg,#00e5ff,#ff6ec7,#ffd700);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    text-shadow:0 0 40px rgba(0,229,255,.3);
+    letter-spacing:8px;
+    animation:glow 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow{
+    0%{filter:drop-shadow(0 0 10px rgba(0,229,255,.5))}
+    100%{filter:drop-shadow(0 0 30px rgba(255,110,199,.5))}
+  }
+
+  .subtitle{
+    margin-top:20px;font-size:24px;color:rgba(255,255,255,.8);
+    letter-spacing:4px;
+  }
+
+  .hearts{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:hidden;}
+
+  .heart{
+    position:absolute;top:-50px;
+    font-size:24px;opacity:0;
+    animation:fall linear infinite;
+  }
+
+  @keyframes fall{
+    0%{transform:translateY(0) rotate(0deg) scale(.5);opacity:0;}
+    10%{opacity:.9;}
+    90%{opacity:.7;}
+    100%{transform:translateY(110vh) rotate(360deg) scale(1.2);opacity:0;}
+  }
+
+  .footer{
+    position:fixed;bottom:30px;width:100%;text-align:center;
+    color:rgba(255,255,255,.4);font-size:14px;letter-spacing:2px;z-index:10;
+  }
+
+  .search-box{
+    margin-top:50px;
+    padding:16px 32px;width:70%;max-width:600px;
+    border:2px solid rgba(0,229,255,.4);border-radius:50px;
+    background:rgba(0,0,0,.3);color:#fff;font-size:20px;text-align:center;
+    outline:none;transition:all .3s;
+  }
+  .search-box:focus{
+    border-color:rgba(255,110,199,.6);
+    box-shadow:0 0 30px rgba(255,110,199,.2);
+  }
+  .search-box::placeholder{color:rgba(255,255,255,.3);}
+
+  .fish{
+    position:absolute;font-size:32px;opacity:.3;
+    animation:swim 15s linear infinite;
+  }
+  @keyframes swim{
+    0%{left:-50px;top:60%;transform:scaleX(1);}
+    50%{top:55%;}
+    100%{left:105%;top:65%;transform:scaleX(1);}
+  }
+
+  /* 🔥 横屏大屏适配（投影仪 1080p） */
+  @media (min-width: 1024px) {
+    .title{font-size:120px;letter-spacing:16px;}
+    .subtitle{font-size:38px;margin-top:30px;}
+    .search-box{font-size:28px;padding:24px 48px;margin-top:60px;}
+    .footer{font-size:20px;bottom:40px;}
+  }
+
+  /* 🔥 竖屏手机适配（模拟器默认） */
+  @media (max-width: 768px) {
+    .title{font-size:52px;letter-spacing:4px;}
+    .subtitle{font-size:18px;}
+    .search-box{width:90%;font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hearts" id="hearts"></div>
+
+<div class="fish" style="animation-delay:0s;">🐟</div>
+<div class="fish" style="animation-delay:5s;top:30%;font-size:24px;">🐠</div>
+<div class="fish" style="animation-delay:10s;top:80%;font-size:28px;">🐟</div>
+
+<div class="container">
+  <div class="title">鱼鱼</div>
+  <div class="subtitle">❤️ 你是我最深的海 ❤️</div>
+  <div style="margin-top:16px;font-size:18px;color:rgba(255,255,255,.5);letter-spacing:2px;">
+    每一帧都是想你 · 每一秒都在爱你
+  </div>
+  <input class="search-box" placeholder="想搜什么？鱼鱼说了算～" onclick="this.select()">
+</div>
+
+<div class="footer">
+  Made with 💙 for 鱼鱼 · Z6X Browser
+</div>
+
+<script>
+const heartsEl = document.getElementById('hearts');
+const heartSymbols = ['❤️','💙','💜','🐟','💗','✨','🫧','🌊'];
+function createHeart(){
+  const h = document.createElement('div');
+  h.className = 'heart';
+  h.textContent = heartSymbols[Math.floor(Math.random()*heartSymbols.length)];
+  h.style.left = Math.random()*100 + '%';
+  h.style.fontSize = (16 + Math.random()*20) + 'px';
+  h.style.animationDuration = (8 + Math.random()*12) + 's';
+  h.style.animationDelay = Math.random()*5 + 's';
+  heartsEl.appendChild(h);
+  setTimeout(()=>h.remove(), 25000);
+}
+setInterval(createHeart, 300);
+
+const lines = [
+  '鱼鱼，你是我的全世界 🌍',
+  '不管投影多远，你是我最近的光 ✨',
+  '想和你一起看每一帧画面 🎬',
+  '你比任何网站都好看 💖',
+  '鱼鱼游进我心里，再也不走了 🐠',
+  '每一天都想跟你一起开机 💻',
+  '你是我唯一想设为主页的人 🏠',
+  '爱你的每一天都是无痕模式——不留痕迹地深爱 💙'
+];
+document.addEventListener('click', function(e){
+  if(e.target.tagName==='INPUT') return;
+  const t = document.createElement('div');
+  t.textContent = lines[Math.floor(Math.random()*lines.length)];
+  t.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;color:#00e5ff;font-size:18px;pointer-events:none;z-index:999;animation:floatUp 2.5s ease-out forwards;`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+});
+</script>
+
+<style>
+@keyframes floatUp{
+  0%{opacity:0;transform:translateY(0) scale(.8);}
+  20%{opacity:1;transform:translateY(-20px) scale(1);}
+  100%{opacity:0;transform:translateY(-80px) scale(1.1);}
+}
+</style>
+
+</body>
+</html>
