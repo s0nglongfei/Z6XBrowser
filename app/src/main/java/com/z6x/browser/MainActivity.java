@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.Gravity;
@@ -30,9 +31,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.URLEncoder;
+
 /**
  * Z6XBrowser - 极米 NEW Z6X 专用浏览器
- * Android 8.0 / API 26 / GMUI 5.0
+ * Android 8.0 / API 26
  */
 public class MainActivity extends Activity {
 
@@ -205,7 +208,7 @@ public class MainActivity extends Activity {
 
             applyUA();
 
-            // WebViewClient
+            // ========== WebViewClient（核心：拦截 z6x:// 协议） ==========
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageFinished(WebView v, String url) {
@@ -219,13 +222,12 @@ public class MainActivity extends Activity {
 
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                    String url = request.getUrl().toString();
-                    return !(url.startsWith("http://") || url.startsWith("https://"));
+                    return handleZ6x(request.getUrl().toString());
                 }
 
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                    return !(url.startsWith("http://") || url.startsWith("https://"));
+                    return handleZ6x(url);
                 }
             });
 
@@ -317,6 +319,36 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ========== 核心：处理自定义协议 ==========
+    private boolean handleZ6x(String url) {
+        if (url != null && url.startsWith("z6x://")) {
+            try {
+                Uri uri = Uri.parse(url);
+                String host = uri.getHost();
+
+                if ("open".equals(host)) {
+                    String target = uri.getQueryParameter("url");
+                    if (target != null) {
+                        web.loadUrl(target);
+                    }
+                    return true;
+
+                } else if ("search".equals(host)) {
+                    String q = uri.getQueryParameter("q");
+                    if (q != null && q.length() > 0) {
+                        String baidu = "https://m.baidu.com/s?wd=" + URLEncoder.encode(q, "UTF-8");
+                        web.loadUrl(baidu);
+                    }
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+        return !(url.startsWith("http://") || url.startsWith("https://"));
+    }
+
     // ==================== 以下为各方法 ====================
 
     void applyUA() {
@@ -376,6 +408,18 @@ public class MainActivity extends Activity {
         if (address == null || web == null) return;
         String u = address.getText().toString().trim();
         if (u.length() == 0) return;
+
+        // 如果是搜索词（不含.），直接百度
+        if (!u.contains(".") && !u.contains(" ")) {
+            try {
+                String baidu = "https://m.baidu.com/s?wd=" + URLEncoder.encode(u, "UTF-8");
+                web.loadUrl(baidu);
+            } catch (Exception e) { e.printStackTrace(); }
+            hideIME();
+            address.clearFocus();
+            return;
+        }
+
         if (!u.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) u = "https://" + u;
         web.loadUrl(u);
         hideIME();
