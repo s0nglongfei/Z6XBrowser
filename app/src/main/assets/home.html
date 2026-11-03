@@ -13,11 +13,9 @@ body {
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     position:relative; color:#fff;
 }
-/* 星空背景 */
 #stars{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
 .star{position:absolute;background:#fff;border-radius:50%;}
 
-/* 主内容 */
 .content{position:relative;z-index:10;text-align:center;padding:40px;}
 .logo{font-size:64px;margin-bottom:10px;}
 .title{
@@ -27,7 +25,6 @@ body {
 }
 .subtitle{font-size:20px;color:rgba(255,255,255,.7);margin-bottom:50px;}
 
-/* 搜索框 */
 .search-wrap{
     display:flex;align-items:center;gap:12px;
     background:rgba(255,255,255,.12);backdrop-filter:blur(12px);
@@ -44,7 +41,6 @@ body {
     padding:12px 28px;color:#000;font-size:18px;font-weight:bold;cursor:pointer;
 }
 
-/* 一键直达 */
 .section-title{font-size:18px;color:rgba(255,255,255,.6);margin-bottom:20px;}
 .sites{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;max-width:900px;}
 .site{
@@ -59,7 +55,7 @@ body {
 .bili{background:linear-gradient(135deg,#fb7299,#e0477a);}
 .douyin{background:linear-gradient(135deg,#fff,#ddd);color:#000;}
 .youtube{background:linear-gradient(135deg,#ff0000,#cc0000);}
-.iqiyi{background:linear-gradient(135deg,#00be06,#009a04);color:#fff;}
+.iqiyi{background:linear-gradient(135deg,#00be06,#009a04);}
 .youku{background:linear-gradient(135deg,#000,#333);}
 
 .quote{
@@ -125,7 +121,7 @@ document.getElementById('kw').addEventListener('keydown', function(e){
     if(e.key === 'Enter') doSearch();
 });
 
-// 一键直达（核心跳转）
+// 一键直达
 function go(url){
     location.href = 'yuyu://open?url=' + encodeURIComponent(url);
 }
