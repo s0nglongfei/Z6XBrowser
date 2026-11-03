@@ -1,6 +1,7 @@
 package com.z6x.browser;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -11,13 +12,13 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
-import android.webkit.CookieSyncManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
-import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.AdapterView;
@@ -28,22 +29,10 @@ import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Context;
-import android.webkit.WebResourceRequest;
 
 /**
- * Z6X / NEW Z6X 专用网页浏览器
- * 目标系统：Android 8.0（API 26，实测 NEW Z6X GMUI 5.0）
- * 全部调用的 API 均 <= 26，不会触发 NoSuchMethodError
- *
- * 遥控器 MENU 键循环切换四种模式：
- *   0 鼠标模式：方向键移动青色箭头光标，OK 键模拟触摸点击（彻底绕开网页焦点问题）
- *   1 滚动模式：方向键滚动页面，OK 键回到鼠标模式
- *   2 导航模式：方向键在顶栏按钮间移动焦点
- *   3 输入模式：屏幕弹出字符键盘，方向键选字符、OK 输入（不依赖任何输入法）
- *
- * 默认无痕：不写历史、不落 Cookie、不缓存、不存表单，退出时全部清空
- * UA 切换：手机 / 桌面Chrome / iPad 三档，解决老 WebView 被网站拒绝播放
+ * Z6XBrowser - 极米 NEW Z6X 专用浏览器
+ * Android 8.0 / API 26 / GMUI 5.0
  */
 public class MainActivity extends Activity {
 
@@ -55,21 +44,19 @@ public class MainActivity extends Activity {
     GridView keyboard;
     FrameLayout fullscreen;
     WebChromeClient.CustomViewCallback fullscreenCallback;
-    TextView uaBtn, incBtn;      // 直接持有引用，避免靠索引找按钮错位
+    TextView uaBtn, incBtn;
 
-    int mode = 0;              // 0鼠标 1滚动 2导航 3输入
+    int mode = 0;
     float px = 350, py = 220;
 
-    boolean incognito = true;  // 默认无痕
-    int uaMode = 0;            // 0手机 1桌面 2iPad
+    boolean incognito = true;
+    int uaMode = 0;
 
-    // 桌面 Chrome UA（伪装后多数视频站会放行）
     static final String UA_DESKTOP =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     static final String UA_IPAD =
             "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
-    // 内置键盘字符表（9 列，遥控器上下左右选字，OK 输入）
     static final String[] KEYS = {
             "a", "b", "c", "d", "e", "f", "g", "h", "i",
             "j", "k", "l", "m", "n", "o", "p", "q", "r",
@@ -87,7 +74,7 @@ public class MainActivity extends Activity {
     };
 
     int dp(float x) {
-        return (int) (x * getResources().getDisplayMetrics().density + .5f);
+        return (int) (x * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     TextView button(String s, final Runnable r) {
@@ -111,269 +98,226 @@ public class MainActivity extends Activity {
         return v;
     }
 
+    @Override
     public void onCreate(Bundle b) {
-    super.onCreate(b);
-    try {   
+        super.onCreate(b);
 
-        getWindow().setFlags(1024, 1024);   // FLAG_FULLSCREEN
-        root = new FrameLayout(this);
-        setContentView(root);
-
-
-// 设置焦点和触摸弹键盘
-web.setFocusable(true);
-web.setFocusableInTouchMode(true);
-web.setEnabled(true);
-web.requestFocus(View.FOCUS_DOWN);
-
-web.setOnTouchListener(new View.OnTouchListener() {
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if (!v.hasFocus()) v.requestFocusFromTouch();
-            InputMethodManager imm =
-                (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
-        }
-        return false;
-    }
-});
-
-
-
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
-        root.addView(main, new FrameLayout.LayoutParams(-1, -1));
-
-        // ---------- 顶栏 ----------
-        bar = new LinearLayout(this);
-        bar.setBackgroundColor(0xff202631);
-        main.addView(bar, new LinearLayout.LayoutParams(-1, dp(54)));
-
-        bar.addView(button("←", new Runnable() {
-            public void run() { if (web.canGoBack()) web.goBack(); }
-        }));
-        bar.addView(button("→", new Runnable() {
-            public void run() { if (web.canGoForward()) web.goForward(); }
-        }));
-        bar.addView(button("⟳", new Runnable() {
-            public void run() { web.reload(); }
-        }));
-
-        address = new EditText(this);
-        address.setSingleLine(true);
-        address.setTextColor(0xffffffff);
-        address.setHintTextColor(0xffbbbbbb);
-        address.setHint("输入网址");
-        address.setInputType(17);
-        address.setBackgroundColor(0xff11151c);
-        address.setPadding(dp(10), 0, dp(10), 0);
-        bar.addView(address, new LinearLayout.LayoutParams(0, -1, 1));
-        address.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            public boolean onEditorAction(TextView v, int a, KeyEvent e) {
-                navigate();
-                return true;
-            }
-        });
-        address.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { openKeyboard(); }
-        });
-
-        bar.addView(button("访问", new Runnable() {
-            public void run() { navigate(); }
-        }));
-        bar.addView(button("网址", new Runnable() {
-            public void run() { openKeyboard(); }
-        }));
-        uaBtn = button("UA", new Runnable() {
-            public void run() { switchUA(); }
-        });
-        bar.addView(uaBtn);
-        incBtn = button("无痕", new Runnable() {
-            public void run() { toggleIncognito(); }
-        });
-        bar.addView(incBtn);
-        bar.addView(button("模式", new Runnable() {
-            public void run() { switchMode(); }
-        }));
-
-        // ---------- 网页区 ----------
-        stage = new FrameLayout(this);
-        main.addView(stage, new LinearLayout.LayoutParams(-1, 0, 1));
-        web = new WebView(this);
-        stage.addView(web, new FrameLayout.LayoutParams(-1, -1));
-
-        applyIncognito();      // 先按无痕初始化
-        setupWebViewSettings();
-
-        web.setWebViewClient(new WebViewClient() {
-    public void onPageFinished(WebView v, String url) {
-        address.setText(url);
-        // 主页时隐藏顶栏，全屏展示
-        if ("file:///android_asset/home.html".equals(url)) {
-            bar.setVisibility(View.GONE);
-        } else {
-            bar.setVisibility(View.VISIBLE);
-        }
-    }
-    
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-        String url = request.getUrl().toString();
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常网页放行
-        }
-        return true; // 其他协议拦截
-    }
-    
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常网页放行
-        }
-        return true; // 其他协议拦截
-    }
-});
-
-
-        web.setWebChromeClient(new WebChromeClient() {
-            public void onShowCustomView(View view, CustomViewCallback cb) {
-                if (fullscreen != null) {
-                    cb.onCustomViewHidden();
-                    return;
-                }
-                fullscreen = new FrameLayout(MainActivity.this);
-                fullscreen.setBackgroundColor(0xff000000);
-                fullscreen.addView(view, new FrameLayout.LayoutParams(-1, -1));
-                root.addView(fullscreen, new FrameLayout.LayoutParams(-1, -1));
-                fullscreenCallback = cb;
-            }
-
-            public void onHideCustomView() { hideVideo(); }
-
-            // 无痕下拒绝定位，避免站点拿真实位置
-            public void onGeolocationPermissionsShowPrompt(String origin,
-                                                           GeolocationPermissions.Callback cb) {
-                cb.invoke(origin, false, false);
-            }
-        });
-
-        // ---------- 鼠标光标（青色箭头） ----------
-        cursor = new View(this) {
-            Paint p = new Paint(3);
-
-            protected void onDraw(Canvas c) {
-                p.setColor(0xff00e5ff);
-                p.setStyle(Paint.Style.FILL);
-                Path path = new Path();
-                path.moveTo(1, 1);
-                path.lineTo(1, dp(27));
-                path.lineTo(dp(8), dp(20));
-                path.lineTo(dp(14), dp(34));
-                path.lineTo(dp(19), dp(31));
-                path.lineTo(dp(12), dp(18));
-                path.lineTo(dp(23), dp(18));
-                path.close();
-                c.drawPath(path, p);
-                p.setColor(0xff000000);
-                p.setStyle(Paint.Style.STROKE);
-                p.setStrokeWidth(dp(2));
-                c.drawPath(path, p);
-            }
-        };
-        stage.addView(cursor, new FrameLayout.LayoutParams(dp(36), dp(40)));
-        stage.post(new Runnable() {
-            public void run() {
-                px = stage.getWidth() / 2f;
-                py = stage.getHeight() / 2f;
-                position();
-            }
-        });
-
-        // ---------- 内置键盘 ----------
-        buildKeyboard(main);
-
-        web.loadUrl("file:///android_asset/home.html");
-
-        hideIME();
-        updateIncognitoButton();
-        updateUAButton();
-    } catch (Throwable e) {         // ✅ 加的
-        e.printStackTrace();
-        Toast.makeText(this, "启动出错：" + e.getMessage(), Toast.LENGTH_LONG).show();
-    }                              // ✅ 加的
-}
-
-    /** WebView 基础设置（视频播放相关） */
-    void setupWebViewSettings() {
-        WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);          // 多数视频站依赖，无痕下退出会清空
-        s.setMediaPlaybackRequiresUserGesture(false);
-        s.setBuiltInZoomControls(true);
-        s.setDisplayZoomControls(false);
-        s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
-        s.setSupportZoom(true);
-        s.setSaveFormData(false);
-        s.setSavePassword(false);
-        s.setGeolocationEnabled(false);
-        //s.setAppCacheEnabled(false);
-        s.setDatabaseEnabled(false);
-        applyUA();
-    }
-
-    /** 应用无痕：关缓存、禁 Cookie、不写历史 */
-    void applyIncognito() {
-        WebSettings s = web.getSettings();
-        if (incognito) {
-            s.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        } else {
-            s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        }
-        s.setSaveFormData(false);
-        CookieManager cm = CookieManager.getInstance();
-        cm.setAcceptCookie(!incognito);
         try {
-            CookieSyncManager.createInstance(this);
-            CookieSyncManager.getInstance().sync();
-        } catch (Exception ignore) {
-            // Android 8 上 CookieSyncManager 已废弃，CookieManager 自身已自动 flush
+            // ========== 1. 全屏 ==========
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN
+            );
+
+            // ========== 2. 根布局 ==========
+            root = new FrameLayout(this);
+            setContentView(root);
+
+            LinearLayout main = new LinearLayout(this);
+            main.setOrientation(LinearLayout.VERTICAL);
+            root.addView(main, new FrameLayout.LayoutParams(-1, -1));
+
+            // ========== 3. 顶栏 ==========
+            bar = new LinearLayout(this);
+            bar.setBackgroundColor(0xff202631);
+            main.addView(bar, new LinearLayout.LayoutParams(-1, dp(54)));
+
+            bar.addView(button("←", new Runnable() {
+                public void run() { if (web != null && web.canGoBack()) web.goBack(); }
+            }));
+            bar.addView(button("→", new Runnable() {
+                public void run() { if (web != null && web.canGoForward()) web.goForward(); }
+            }));
+            bar.addView(button("⟳", new Runnable() {
+                public void run() { if (web != null) web.reload(); }
+            }));
+
+            address = new EditText(this);
+            address.setSingleLine(true);
+            address.setTextColor(0xffffffff);
+            address.setHintTextColor(0xffbbbbbb);
+            address.setHint("输入网址");
+            address.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+            address.setBackgroundColor(0xff11151c);
+            address.setPadding(dp(10), 0, dp(10), 0);
+            bar.addView(address, new LinearLayout.LayoutParams(0, -1, 1));
+            address.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                public boolean onEditorAction(TextView v, int a, KeyEvent e) {
+                    navigate();
+                    return true;
+                }
+            });
+            address.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { openKeyboard(); }
+            });
+
+            bar.addView(button("访问", new Runnable() {
+                public void run() { navigate(); }
+            }));
+            bar.addView(button("网址", new Runnable() {
+                public void run() { openKeyboard(); }
+            }));
+
+            uaBtn = button("UA手机", new Runnable() {
+                public void run() { switchUA(); }
+            });
+            bar.addView(uaBtn);
+
+            incBtn = button("无痕✓", new Runnable() {
+                public void run() { toggleIncognito(); }
+            });
+            bar.addView(incBtn);
+
+            bar.addView(button("模式", new Runnable() {
+                public void run() { switchMode(); }
+            }));
+
+            // ========== 4. 网页区 ==========
+            stage = new FrameLayout(this);
+            main.addView(stage, new LinearLayout.LayoutParams(-1, 0, 1));
+
+            // ★★★ WebView 最先初始化 ★★★
+            web = new WebView(this);
+            web.setFocusable(true);
+            web.setFocusableInTouchMode(true);
+            web.setEnabled(true);
+            stage.addView(web, new FrameLayout.LayoutParams(-1, -1));
+
+            // WebView 设置
+            WebSettings s = web.getSettings();
+            s.setJavaScriptEnabled(true);
+            s.setDomStorageEnabled(true);
+            s.setAllowFileAccess(true);
+            s.setMediaPlaybackRequiresUserGesture(false);
+            s.setBuiltInZoomControls(true);
+            s.setDisplayZoomControls(false);
+            s.setUseWideViewPort(true);
+            s.setLoadWithOverviewMode(true);
+            s.setSupportZoom(true);
+            s.setSaveFormData(false);
+            s.setSavePassword(false);
+            s.setGeolocationEnabled(false);
+            s.setDatabaseEnabled(false);
+            s.setCacheMode(incognito ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
+
+            CookieManager cm = CookieManager.getInstance();
+            cm.setAcceptCookie(!incognito);
+
+            applyUA();
+
+            // WebViewClient
+            web.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView v, String url) {
+                    address.setText(url);
+                    if ("file:///android_asset/home.html".equals(url)) {
+                        bar.setVisibility(View.GONE);
+                    } else {
+                        bar.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    String url = request.getUrl().toString();
+                    return !(url.startsWith("http://") || url.startsWith("https://"));
+                }
+
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    return !(url.startsWith("http://") || url.startsWith("https://"));
+                }
+            });
+
+            // WebChromeClient
+            web.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onShowCustomView(View view, CustomViewCallback cb) {
+                    if (fullscreen != null) {
+                        cb.onCustomViewHidden();
+                        return;
+                    }
+                    fullscreen = new FrameLayout(MainActivity.this);
+                    fullscreen.setBackgroundColor(0xff000000);
+                    fullscreen.addView(view, new FrameLayout.LayoutParams(-1, -1));
+                    root.addView(fullscreen, new FrameLayout.LayoutParams(-1, -1));
+                    fullscreenCallback = cb;
+                }
+
+                @Override
+                public void onHideCustomView() {
+                    hideVideo();
+                }
+
+                @Override
+                public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
+                    cb.invoke(origin, false, false);
+                }
+            });
+
+            // 触摸弹键盘
+            web.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        if (!v.hasFocus()) v.requestFocusFromTouch();
+                        InputMethodManager imm =
+                                (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                    return false;
+                }
+            });
+
+            // ========== 5. 鼠标光标 ==========
+            cursor = new View(this) {
+                Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+                protected void onDraw(Canvas c) {
+                    p.setColor(0xff00e5ff);
+                    p.setStyle(Paint.Style.FILL);
+                    Path path = new Path();
+                    path.moveTo(1, 1);
+                    path.lineTo(1, dp(27));
+                    path.lineTo(dp(8), dp(20));
+                    path.lineTo(dp(14), dp(34));
+                    path.lineTo(dp(19), dp(31));
+                    path.lineTo(dp(12), dp(18));
+                    path.lineTo(dp(23), dp(18));
+                    path.close();
+                    c.drawPath(path, p);
+                    p.setColor(0xff000000);
+                    p.setStyle(Paint.Style.STROKE);
+                    p.setStrokeWidth(dp(2));
+                    c.drawPath(path, p);
+                }
+            };
+            stage.addView(cursor, new FrameLayout.LayoutParams(dp(36), dp(40)));
+            stage.post(new Runnable() {
+                public void run() {
+                    px = stage.getWidth() / 2f;
+                    py = stage.getHeight() / 2f;
+                    position();
+                }
+            });
+
+            // ========== 6. 内置键盘 ==========
+            buildKeyboard(main);
+
+            // ========== 7. 加载主页 ==========
+            web.loadUrl("file:///android_asset/home.html");
+
+            hideIME();
+            updateIncognitoButton();
+            updateUAButton();
+
+        } catch (Throwable e) {
+            e.printStackTrace();
+            Toast.makeText(this, "启动出错：" + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
-    /** 清空一切痕迹 */
-    void wipeAll() {
-        web.clearCache(true);
-        web.clearHistory();
-        web.clearFormData();
-        CookieManager.getInstance().removeAllCookie();
-        WebStorage.getInstance().deleteAllData();
-    }
-
-    void toggleIncognito() {
-        incognito = !incognito;
-        applyIncognito();
-        wipeAll();
-        updateIncognitoButton();
-        Toast.makeText(this, incognito ? "无痕：开（不记录任何浏览数据）" : "无痕：关（会缓存和记录）",
-                Toast.LENGTH_SHORT).show();
-    }
-
-    // 顶栏子控件顺序：0← 1→ 2⟳ 3地址框 4访问 5网址 6UA 7无痕 8模式
-    // 只用文字表示状态，不改背景色，避免与焦点高亮互相覆盖
-    void updateIncognitoButton() {
-        if (incBtn != null) {
-            incBtn.setText(incognito ? "无痕✓" : "无痕✗");
-        }
-    }
-
-    void switchUA() {
-        uaMode = (uaMode + 1) % 3;
-        applyUA();
-        updateUAButton();
-        web.reload();
-    }
+    // ==================== 以下为各方法 ====================
 
     void applyUA() {
         WebSettings s = web.getSettings();
@@ -382,8 +326,15 @@ web.setOnTouchListener(new View.OnTouchListener() {
         } else if (uaMode == 2) {
             s.setUserAgentString(UA_IPAD);
         } else {
-            s.setUserAgentString(null);   // 恢复系统默认
+            s.setUserAgentString(null);
         }
+    }
+
+    void switchUA() {
+        uaMode = (uaMode + 1) % 3;
+        applyUA();
+        updateUAButton();
+        if (web != null) web.reload();
     }
 
     void updateUAButton() {
@@ -392,7 +343,45 @@ web.setOnTouchListener(new View.OnTouchListener() {
         }
     }
 
-    /** 构建不依赖输入法的字符键盘 */
+    void toggleIncognito() {
+        incognito = !incognito;
+        WebSettings s = web.getSettings();
+        s.setCacheMode(incognito ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
+        CookieManager cm = CookieManager.getInstance();
+        cm.setAcceptCookie(!incognito);
+        wipeAll();
+        updateIncognitoButton();
+        Toast.makeText(this, incognito ? "无痕：开" : "无痕：关", Toast.LENGTH_SHORT).show();
+    }
+
+    void updateIncognitoButton() {
+        if (incBtn != null) {
+            incBtn.setText(incognito ? "无痕✓" : "无痕✗");
+        }
+    }
+
+    void wipeAll() {
+        if (web != null) {
+            web.clearCache(true);
+            web.clearHistory();
+            web.clearFormData();
+        }
+        CookieManager.getInstance().removeAllCookie();
+        try {
+            android.webkit.WebStorage.getInstance().deleteAllData();
+        } catch (Exception ignore) {}
+    }
+
+    void navigate() {
+        if (address == null || web == null) return;
+        String u = address.getText().toString().trim();
+        if (u.length() == 0) return;
+        if (!u.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) u = "https://" + u;
+        web.loadUrl(u);
+        hideIME();
+        address.clearFocus();
+    }
+
     void buildKeyboard(LinearLayout main) {
         keyboardPanel = new LinearLayout(this);
         keyboardPanel.setOrientation(LinearLayout.VERTICAL);
@@ -407,9 +396,7 @@ web.setOnTouchListener(new View.OnTouchListener() {
         keyboard.setPadding(dp(8), dp(8), dp(8), dp(8));
         keyboard.setAdapter(new BaseAdapter() {
             public int getCount() { return KEYS.length; }
-
             public Object getItem(int i) { return KEYS[i]; }
-
             public long getItemId(int i) { return i; }
 
             public View getView(int i, View cv, ViewGroup p) {
@@ -475,20 +462,11 @@ web.setOnTouchListener(new View.OnTouchListener() {
         try {
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                     .hideSoftInputFromWindow(address.getWindowToken(), 0);
-        } catch (Exception ignore) {
-        }
-    }
-
-    void navigate() {
-        String u = address.getText().toString().trim();
-        if (u.length() == 0) return;
-        if (!u.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) u = "https://" + u;
-        web.loadUrl(u);
-        hideIME();
-        address.clearFocus();
+        } catch (Exception ignore) {}
     }
 
     void position() {
+        if (stage == null || cursor == null) return;
         px = Math.max(0, Math.min(stage.getWidth() - dp(30), px));
         py = Math.max(0, Math.min(stage.getHeight() - dp(36), py));
         cursor.setX(px);
@@ -529,7 +507,6 @@ web.setOnTouchListener(new View.OnTouchListener() {
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
         if (fullscreen != null) return super.dispatchKeyEvent(e);
-        // 输入模式：全部交给系统焦点，GridView 方向键导航即可用
         if (mode == 3) return super.dispatchKeyEvent(e);
 
         int k = e.getKeyCode();
@@ -567,7 +544,8 @@ web.setOnTouchListener(new View.OnTouchListener() {
                 } else {
                     web.scrollBy(
                             k == KeyEvent.KEYCODE_DPAD_LEFT ? -dp(160) : k == KeyEvent.KEYCODE_DPAD_RIGHT ? dp(160) : 0,
-                            k == KeyEvent.KEYCODE_DPAD_UP ? -dp(200) : k == KeyEvent.KEYCODE_DPAD_DOWN ? dp(200) : 0);
+                            k == KeyEvent.KEYCODE_DPAD_UP ? -dp(200) : k == KeyEvent.KEYCODE_DPAD_DOWN ? dp(200) : 0
+                    );
                 }
             }
             return true;
@@ -585,8 +563,11 @@ web.setOnTouchListener(new View.OnTouchListener() {
             closeKeyboard();
             return;
         }
-        if (web.canGoBack()) web.goBack();
-        else super.onBackPressed();
+        if (web != null && web.canGoBack()) {
+            web.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override
@@ -603,9 +584,10 @@ web.setOnTouchListener(new View.OnTouchListener() {
 
     @Override
     protected void onDestroy() {
-        wipeAll();                 // 退出即清空所有痕迹
+        wipeAll();
         if (web != null) {
             web.destroy();
+            web = null;
         }
         super.onDestroy();
     }
