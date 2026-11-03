@@ -2,6 +2,7 @@ package com.z6x.browser;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
@@ -11,7 +12,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.net.Uri;
 
 public class MainActivity extends Activity {
 
@@ -53,13 +53,13 @@ public class MainActivity extends Activity {
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
 
-        // 视频播放关键
+        // 视频播放
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setSupportZoom(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
 
-        // 文件/跨域（本地主页跳转需要）
+        // 文件/跨域
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setAllowUniversalAccessFromFileURLs(true);
@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
         cm.setAcceptCookie(true);
         cm.setAcceptThirdPartyCookies(web, true);
 
-        // ===== 跳转拦截：处理主页的 yuyu:// 协议 =====
+        // 跳转拦截：处理主页的 yuyu:// 协议
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                // 页面加载完，自动尝试点击"确认/继续/已满18"类按钮
+                // 页面加载完，自动尝试点击"确认/继续"类按钮
                 autoClickConfirm();
             }
         });
@@ -106,7 +106,7 @@ public class MainActivity extends Activity {
 
         if (url.startsWith("yuyu://")) {
             Uri uri = Uri.parse(url);
-            String action = uri.getHost();   // open / search
+            String action = uri.getHost();
 
             if ("open".equals(action)) {
                 String target = uri.getQueryParameter("url");
@@ -120,13 +120,12 @@ public class MainActivity extends Activity {
                     view.loadUrl(baidu);
                 }
             }
-            return true; // 自己处理，不让系统浏览器抢
+            return true;
 
         } else if (url.startsWith("http://") || url.startsWith("https://")) {
-            return false; // 正常网页，让 WebView 自己加载
+            return false; // 正常网页，WebView 自己加载
         }
 
-        // 其他协议（tel: mailto: 等）交给系统
         return false;
     }
 
