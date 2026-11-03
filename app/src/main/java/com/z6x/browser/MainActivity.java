@@ -36,6 +36,7 @@ import java.net.URLEncoder;
 /**
  * Z6XBrowser - 极米 NEW Z6X 专用浏览器
  * Android 8.0 / API 26
+ * 修复：JS注入点击替代模拟触摸、UA优化、Cookie支持
  */
 public class MainActivity extends Activity {
 
@@ -59,6 +60,8 @@ public class MainActivity extends Activity {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     static final String UA_IPAD =
             "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+    static final String UA_PHONE =
+            "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
 
     static final String[] KEYS = {
             "a", "b", "c", "d", "e", "f", "g", "h", "i",
@@ -186,29 +189,22 @@ public class MainActivity extends Activity {
             web.setEnabled(true);
             stage.addView(web, new FrameLayout.LayoutParams(-1, -1));
 
-            // WebView 设置
-            WebSettings s = web.getSettings();
-            s.setJavaScriptEnabled(true);
-            s.setDomStorageEnabled(true);
-            s.setAllowFileAccess(true);
-            s.setMediaPlaybackRequiresUserGesture(false);
-            s.setBuiltInZoomControls(true);
-            s.setDisplayZoomControls(false);
-            s.setUseWideViewPort(true);
-            s.setLoadWithOverviewMode(true);
-            s.setSupportZoom(true);
-            s.setSaveFormData(false);
-            s.setSavePassword(false);
-            s.setGeolocationEnabled(false);
-            s.setDatabaseEnabled(false);
-            s.setCacheMode(incognito ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
+            // ========== WebView 设置 ==========
+            setupWebViewSettings();
 
+            // Cookie 初始化
             CookieManager cm = CookieManager.getInstance();
-            cm.setAcceptCookie(!incognito);
+            cm.setAcceptCookie(true);
+            cm.setAcceptThirdPartyCookies(web, true);
+            if (incognito) {
+                web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+            } else {
+                web.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+            }
 
             applyUA();
 
-            // ========== WebViewClient（核心：拦截 z6x:// 协议） ==========
+            // ========== WebViewClient ==========
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageFinished(WebView v, String url) {
@@ -218,6 +214,9 @@ public class MainActivity extends Activity {
                     } else {
                         bar.setVisibility(View.VISIBLE);
                     }
+
+                    // ★ 自动点击验证按钮（解决年龄验证页卡住问题）
+                    autoClickVerifyButton();
                 }
 
                 @Override
@@ -319,6 +318,80 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ========== WebView 完整设置 ==========
+    void setupWebViewSettings() {
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setBuiltInZoomControls(true);
+        s.setDisplayZoomControls(false);
+        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(true);
+        s.setSupportZoom(true);
+        s.setSaveFormData(false);
+        s.setSavePassword(false);
+        s.setGeolocationEnabled(false);
+        s.setDatabaseEnabled(false);
+        s.setCacheMode(incognito ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
+    }
+
+    // ========== 自动点击验证/继续按钮 ==========
+    void autoClickVerifyButton() {
+        String js = "javascript:(function(){" +
+                "var btns = document.querySelectorAll('button, a, input[type=submit], .btn, [role=button]');" +
+                "for(var i=0; i<btns.length; i++){" +
+                "   var txt = (btns[i].innerText || btns[i].value || btns[i].getAttribute('aria-label') || '').toLowerCase();" +
+                "   if(txt.includes('weitermachen') || txt.includes('enter') || txt.includes('continue') || " +
+                "      txt.includes('verify') || txt.includes('verification') || txt.includes('accept') || " +
+                "      txt.includes('confirm') || txt.includes('agree') || txt.includes('yes') || " +
+                "      txt.includes('ich bin') || txt.includes('i am') || txt.includes('18') || " +
+                "      txt.includes('allow') || txt.includes('access') || txt.includes('submit')){" +
+                "       btns[i].style.border='3px solid #00e5ff';" +
+                "       btns[i].style.boxShadow='0 0 15px #00e5ff';" +
+                "       btns[i].click();" +
+                "       return;" +
+                "   }" +
+                "}" +
+                // 也尝试找表单提交
+                "var forms = document.querySelectorAll('form');" +
+                "for(var f=0; f<forms.length; f++){ forms[f].submit(); }" +
+                "})()";
+        web.evaluateJavascript(js, null);
+    }
+
+    // ========== JS注入点击（替代模拟触摸） ==========
+    void jsClickAt(float x, float y) {
+        String js = "javascript:(function(){" +
+                "var el = document.elementFromPoint(" + x + ", " + y + ");" +
+                "if(!el) return;" +
+                // 尝试点击元素本身
+                "el.click();" +
+                // 如果元素有onclick或者是个链接/按钮，也触发事件
+                "var ev = new MouseEvent('click', {" +
+                "   view: window," +
+                "   bubbles: true," +
+                "   cancelable: true," +
+                "   clientX: " + x + "," +
+                "   clientY: " + y +
+                "});" +
+                "el.dispatchEvent(ev);" +
+                // 也尝试找父级可点击元素
+                "var parent = el.parentElement;" +
+                "for(var i=0; i<5 && parent; i++){" +
+                "   if(parent.tagName==='BUTTON' || parent.tagName==='A' || parent.onclick){" +
+                "       parent.click();" +
+                "       break;" +
+                "   }" +
+                "   parent = parent.parentElement;" +
+                "}" +
+                "})()";
+        web.evaluateJavascript(js, null);
+    }
+
     // ========== 核心：处理自定义协议 ==========
     private boolean handleZ6x(String url) {
         if (url != null && url.startsWith("z6x://")) {
@@ -358,7 +431,7 @@ public class MainActivity extends Activity {
         } else if (uaMode == 2) {
             s.setUserAgentString(UA_IPAD);
         } else {
-            s.setUserAgentString(null);
+            s.setUserAgentString(UA_PHONE); // 默认手机UA，兼容性最好
         }
     }
 
@@ -381,9 +454,11 @@ public class MainActivity extends Activity {
         s.setCacheMode(incognito ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(!incognito);
-        wipeAll();
+        if (incognito) {
+            wipeAll();
+        }
         updateIncognitoButton();
-        Toast.makeText(this, incognito ? "无痕：开" : "无痕：关", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, incognito ? "无痕：开（部分网站可能需关闭）" : "无痕：关", Toast.LENGTH_SHORT).show();
     }
 
     void updateIncognitoButton() {
@@ -409,8 +484,8 @@ public class MainActivity extends Activity {
         String u = address.getText().toString().trim();
         if (u.length() == 0) return;
 
-        // 如果是搜索词（不含.），直接百度
-        if (!u.contains(".") && !u.contains(" ")) {
+        // 如果是搜索词（不含.或含空格），直接百度
+        if (!u.contains(".") || u.contains(" ")) {
             try {
                 String baidu = "https://m.baidu.com/s?wd=" + URLEncoder.encode(u, "UTF-8");
                 web.loadUrl(baidu);
@@ -561,16 +636,15 @@ public class MainActivity extends Activity {
         if (mode == 2) return super.dispatchKeyEvent(e);
         if (k == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
 
+        // ★★★ 确认键：用JS注入点击（替代模拟触摸）★★★
         if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER) {
             if (e.getAction() == KeyEvent.ACTION_UP) {
                 if (mode == 1) {
                     mode = 0;
                     position();
                 } else {
-                    long t = SystemClock.uptimeMillis();
-                    float x = px + dp(2), y = py + dp(2);
-                    web.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x, y, 0));
-                    web.dispatchTouchEvent(MotionEvent.obtain(t, t + 60, MotionEvent.ACTION_UP, x, y, 0));
+                    // 用JS注入点击光标位置的元素
+                    jsClickAt(px + dp(2), py + dp(2));
                 }
             }
             return true;
