@@ -1,251 +1,327 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>给鱼鱼的浏览器</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>鱼鱼的专属浏览器 🐟</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{width:100%;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;}
-  
-  body{
-    background:linear-gradient(180deg,#020b1a 0%,#0a2a43 40%,#0d3b5e 70%,#0a1f3a 100%);
-    display:flex;align-items:center;justify-content:center;
-    position:relative;
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  body::before{
-    content:'';position:absolute;top:0;left:0;width:100%;height:100%;
-    background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,.15) 0%,transparent 60%);
-    pointer-events:none;
-  }
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1b4b 30%, #0d2149 60%, #0a1628 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
 
-  .container{
-    position:relative;z-index:10;text-align:center;
-    animation:fadeIn 2s ease;
-    width:100%;padding:0 40px;
-  }
+/* 星空 */
+.stars {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+.star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle 3s infinite;
+}
+@keyframes twinkle { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
 
-  @keyframes fadeIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+/* 爱心雨 */
+.hearts {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+.heart {
+    position: absolute;
+    color: rgba(255, 100, 150, 0.8);
+    font-size: 20px;
+    animation: fall linear infinite;
+}
+@keyframes fall {
+    0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
 
-  .title{
-    font-size:72px;font-weight:bold;
-    background:linear-gradient(135deg,#00e5ff,#ff6ec7,#ffd700);
-    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-    background-clip:text;
-    text-shadow:0 0 40px rgba(0,229,255,.3);
-    letter-spacing:8px;
-    animation:glow 3s ease-in-out infinite alternate;
-  }
+/* 主标题 */
+.title {
+    font-size: 52px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #00e5ff, #ff6699, #ffd700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(0,229,255,0.3);
+    margin-bottom: 8px;
+    z-index: 10;
+    animation: glow 3s ease-in-out infinite alternate;
+}
+@keyframes glow {
+    0% { filter: drop-shadow(0 0 10px rgba(0,229,255,0.5)); }
+    100% { filter: drop-shadow(0 0 25px rgba(255,102,153,0.5)); }
+}
 
-  @keyframes glow{
-    0%{filter:drop-shadow(0 0 10px rgba(0,229,255,.5))}
-    100%{filter:drop-shadow(0 0 30px rgba(255,110,199,.5))}
-  }
+.subtitle {
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 40px;
+    z-index: 10;
+}
 
-  .subtitle{
-    margin-top:20px;font-size:24px;color:rgba(255,255,255,.8);
-    letter-spacing:4px;
-  }
+/* 搜索区 - 毛玻璃 */
+.search-container {
+    z-index: 10;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    width: 70%;
+    max-width: 600px;
+    margin-bottom: 24px;
+}
+.search-container input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 22px;
+    padding: 12px 16px;
+    text-align: center;
+}
+.search-container input::placeholder {
+    color: rgba(255,255,255,0.4);
+}
+.search-btn {
+    background: linear-gradient(135deg, #00e5ff, #0099ff);
+    border: none;
+    border-radius: 30px;
+    padding: 10px 24px;
+    color: #000;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.search-btn:active { transform: scale(0.95); }
 
-  .hearts{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:hidden;}
+/* 快捷按钮 */
+.quick-bar {
+    z-index: 10;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.quick-btn {
+    border: none;
+    border-radius: 25px;
+    padding: 10px 22px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.quick-btn:active { transform: scale(0.9); }
+.btn-baidu { background: linear-gradient(135deg, #00e5ff, #0099ff); color: #000; }
+.btn-bili { background: linear-gradient(135deg, #ff6699, #ff3366); color: #fff; }
+.btn-douyin { background: linear-gradient(135deg, #fff, #ddd); color: #000; }
+.btn-yuyu {
+    background: linear-gradient(135deg, #ff69b4, #ff1493);
+    color: #fff;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,105,180,0.5); }
+    50% { box-shadow: 0 0 25px rgba(255,105,180,0.9); }
+}
 
-  .heart{
-    position:absolute;top:-50px;
-    font-size:24px;opacity:0;
-    animation:fall linear infinite;
-  }
+/* 暗号彩蛋 */
+.easter-egg {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 80px;
+    z-index: 999;
+    pointer-events: none;
+    transition: transform 0.5s;
+}
+.easter-egg.show {
+    transform: translate(-50%, -50%) scale(1);
+    animation: heartBurst 2s forwards;
+}
+@keyframes heartBurst {
+    0% { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%,-50%) scale(1.5); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(2); }
+}
 
-  @keyframes fall{
-    0%{transform:translateY(0) rotate(0deg) scale(.5);opacity:0;}
-    10%{opacity:.9;}
-    90%{opacity:.7;}
-    100%{transform:translateY(110vh) rotate(360deg) scale(1.2);opacity:0;}
-  }
-
-  .footer{
-    position:fixed;bottom:30px;width:100%;text-align:center;
-    color:rgba(255,255,255,.4);font-size:14px;letter-spacing:2px;z-index:10;
-  }
-
-  .search-box{
-    margin-top:50px;
-    padding:16px 32px;width:70%;max-width:600px;
-    border:2px solid rgba(0,229,255,.4);border-radius:50px;
-    background:rgba(0,0,0,.3);color:#fff;font-size:20px;text-align:center;
-    outline:none;transition:all .3s;
-  }
-  .search-box:focus{
-    border-color:rgba(255,110,199,.6);
-    box-shadow:0 0 30px rgba(255,110,199,.2);
-  }
-  .search-box::placeholder{color:rgba(255,255,255,.3);}
-
-  .fish{
-    position:absolute;font-size:32px;opacity:.3;
-    animation:swim 15s linear infinite;
-  }
-  @keyframes swim{
-    0%{left:-50px;top:60%;transform:scaleX(1);}
-    50%{top:55%;}
-    100%{left:105%;top:65%;transform:scaleX(1);}
-  }
-
-  /* 🔥 横屏大屏适配（投影仪 1080p） */
-  @media (min-width: 1024px) {
-    .title{font-size:120px;letter-spacing:16px;}
-    .subtitle{font-size:38px;margin-top:30px;}
-    .search-box{font-size:28px;padding:24px 48px;margin-top:60px;}
-    .footer{font-size:20px;bottom:40px;}
-  }
-
-  /* 🔥 竖屏手机适配（模拟器默认） */
-  @media (max-width: 768px) {
-    .title{font-size:52px;letter-spacing:4px;}
-    .subtitle{font-size:18px;}
-    .search-box{width:90%;font-size:16px;}
-  }
+/* 情话 */
+.love-quote {
+    position: fixed;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+    z-index: 10;
+    text-align: center;
+    max-width: 80%;
+}
 </style>
 </head>
 <body>
 
+<!-- 星空 -->
+<div class="stars" id="stars"></div>
+
+<!-- 爱心雨 -->
 <div class="hearts" id="hearts"></div>
 
-<div class="fish" style="animation-delay:0s;">🐟</div>
-<div class="fish" style="animation-delay:5s;top:30%;font-size:24px;">🐠</div>
-<div class="fish" style="animation-delay:10s;top:80%;font-size:28px;">🐟</div>
+<!-- 主标题 -->
+<div class="title">🐟 鱼鱼的专属浏览器</div>
+<div class="subtitle">~ 鱼鱼说的算 ~</div>
 
-<div class="container">
-  <div class="title">鱼鱼</div>
-  <div class="subtitle">❤️ 你是我最深的海 ❤️</div>
-  <div style="margin-top:16px;font-size:18px;color:rgba(255,255,255,.5);letter-spacing:2px;">
-    每一帧都是想你 · 每一秒都在爱你
-  </div>
-  <input class="search-box" placeholder="想搜什么？鱼鱼说了算～" onclick="this.select()">
+<!-- 搜索 -->
+<div class="search-container">
+    <input id="kw" type="text" placeholder="鱼鱼想搜点啥～" />
+    <button class="search-btn" onclick="doSearch()">🔍 搜索</button>
 </div>
 
-<div class="footer">
-  Made with 💙 for 鱼鱼 · Z6X Browser
+<!-- 快捷入口 -->
+<div class="quick-bar">
+    <button class="quick-btn btn-baidu" onclick="quickOpen('https://m.baidu.com')">🔍 百度</button>
+    <button class="quick-btn btn-bili" onclick="quickOpen('https://m.bilibili.com')">📺 B站</button>
+    <button class="quick-btn btn-douyin" onclick="quickOpen('https://www.douyin.com')">🎵 抖音</button>
+    <button class="quick-btn btn-yuyu" onclick="yuyuSays()">💖 鱼鱼说的算</button>
 </div>
+
+<!-- 彩蛋 -->
+<div class="easter-egg" id="egg">💖</div>
+
+<!-- 情话 -->
+<div class="love-quote" id="quote">"在深海的每一颗星星，都替我说了一句爱你"</div>
 
 <script>
-const heartsEl = document.getElementById('hearts');
-const heartSymbols = ['❤️','💙','💜','🐟','💗','✨','🫧','🌊'];
-function createHeart(){
-  const h = document.createElement('div');
-  h.className = 'heart';
-  h.textContent = heartSymbols[Math.floor(Math.random()*heartSymbols.length)];
-  h.style.left = Math.random()*100 + '%';
-  h.style.fontSize = (16 + Math.random()*20) + 'px';
-  h.style.animationDuration = (8 + Math.random()*12) + 's';
-  h.style.animationDelay = Math.random()*5 + 's';
-  heartsEl.appendChild(h);
-  setTimeout(()=>h.remove(), 25000);
-}
-setInterval(createHeart, 300);
+// ========== 星空 ==========
+(function(){
+    var s = document.getElementById('stars');
+    for(var i=0;i<80;i++){
+        var star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random()*100+'%';
+        star.style.top = Math.random()*100+'%';
+        star.style.animationDelay = Math.random()*3+'s';
+        s.appendChild(star);
+    }
+})();
 
-const lines = [
-  '鱼鱼，你是我的全世界 🌍',
-  '不管投影多远，你是我最近的光 ✨',
-  '想和你一起看每一帧画面 🎬',
-  '你比任何网站都好看 💖',
-  '鱼鱼游进我心里，再也不走了 🐠',
-  '每一天都想跟你一起开机 💻',
-  '你是我唯一想设为主页的人 🏠',
-  '爱你的每一天都是无痕模式——不留痕迹地深爱 💙'
+// ========== 爱心雨 ==========
+(function(){
+    var h = document.getElementById('hearts');
+    function dropHeart(){
+        var heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.innerHTML = ['💖','💕','💗','🐟','❤️'][Math.floor(Math.random()*5)];
+        heart.style.left = Math.random()*100+'%';
+        heart.style.fontSize = (Math.random()*20+14)+'px';
+        heart.style.animationDuration = (Math.random()*5+5)+'s';
+        h.appendChild(heart);
+        setTimeout(function(){heart.remove();}, 10000);
+    }
+    setInterval(dropHeart, 500);
+})();
+
+// ========== 搜索 ==========
+function doSearch(){
+    var kw = document.getElementById('kw').value.trim();
+    if(!kw){
+        // 没输入就打开百度
+        location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
+        return;
+    }
+    // 通过协议通知App搜索
+    location.href = 'z6x://search?q=' + encodeURIComponent(kw);
+}
+
+// 回车搜索
+document.getElementById('kw').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') doSearch();
+});
+
+// ========== 快捷打开 ==========
+function quickOpen(url){
+    location.href = 'z6x://open?url=' + encodeURIComponent(url);
+}
+
+// ========== 鱼鱼说的算 ==========
+function yuyuSays(){
+    var kw = document.getElementById('kw').value.trim();
+    if(kw){
+        // 带仪式感搜索
+        showEgg('💖');
+        setTimeout(function(){
+            location.href = 'z6x://search?q=' + encodeURIComponent('鱼鱼说搜：' + kw);
+        }, 800);
+    } else {
+        showEgg('🐟');
+        setTimeout(function(){
+            location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
+        }, 800);
+    }
+}
+
+// ========== 彩蛋 ==========
+var secretInput = '';
+var eggTriggers = ['鱼鱼','yuyu','iloveyou','我爱你','老公','老婆'];
+
+document.addEventListener('keydown', function(e){
+    secretInput += e.key.toLowerCase();
+    if(secretInput.length > 20) secretInput = secretInput.slice(-20);
+
+    eggTriggers.forEach(function(trigger){
+        if(secretInput.includes(trigger)){
+            showEgg('💖');
+            secretInput = '';
+            return;
+        }
+    });
+});
+
+function showEgg(emoji){
+    var egg = document.getElementById('egg');
+    egg.innerHTML = emoji;
+    egg.classList.add('show');
+    setTimeout(function(){ egg.classList.remove('show'); }, 2000);
+}
+
+// ========== 情话轮播 ==========
+var quotes = [
+    '"在深海的每一颗星星，都替我说了一句爱你"',
+    '"鱼鱼想搜什么，浏览器就搜什么"',
+    '"你是我代码里唯一的 bug，也是唯一的 feature"',
+    '"不管搜什么，最好的结果都是你"',
+    '"今天的风是甜的，因为你说了算"'
 ];
-document.addEventListener('click', function(e){
-  if(e.target.tagName==='INPUT') return;
-  const t = document.createElement('div');
-  t.textContent = lines[Math.floor(Math.random()*lines.length)];
-  t.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;color:#00e5ff;font-size:18px;pointer-events:none;z-index:999;animation:floatUp 2.5s ease-out forwards;`;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 2500);
-});
+var qi = 0;
+setInterval(function(){
+    qi = (qi+1) % quotes.length;
+    document.getElementById('quote').innerHTML = quotes[qi];
+}, 5000);
 </script>
-
-<style>
-@keyframes floatUp{
-  0%{opacity:0;transform:translateY(0) scale(.8);}
-  20%{opacity:1;transform:translateY(-20px) scale(1);}
-  100%{opacity:0;transform:translateY(-80px) scale(1.1);}
-}
-</style>
-<script>
-// ===== 鱼鱼暗号彩蛋 =====
-const secretInput = document.querySelector('.search-box');
-
-const secrets = {
-  '鱼鱼': '🐟 抓到鱼鱼啦！亲一口～',
-  'yuyu': '💙 Yuyu detected... 心跳加速中',
-  'iloveyou': '💗 我也爱你，鱼鱼',
-  '我爱你': '🌊 整片海都听见了',
-  '老公': '😳 乖，别乱叫（其实很开心）'
-};
-
-secretInput.addEventListener('keydown', function(e){
-  if(e.key === 'Enter'){
-    checkSecret(this.value.trim());
-  }
-});
-
-// 失去焦点时也检测一下（遥控器操作更友好）
-secretInput.addEventListener('blur', function(){
-  checkSecret(this.value.trim());
-});
-
-function checkSecret(text){
-  if(!text) return;
-  const lower = text.toLowerCase();
-  let msg = null;
-
-  if(secrets[text]){
-    msg = secrets[text];               // 精确匹配
-  } else if(secrets[lower]){
-    msg = secrets[lower];
-  }
-
-  if(msg){
-    burstHearts();                     // 满屏爱心爆发
-    showBigLove(msg);                  // 中间弹大字
-  } else {
-    // 不是暗号，走正常搜索逻辑（你原来怎么搜就怎么搜）
-    // 比如：window.location.href = 'https://www.baidu.com/s?wd=' + encodeURIComponent(text);
-  }
-}
-
-// 满屏爱心爆发
-function burstHearts(){
-  for(let i=0;i<30;i++){
-    setTimeout(createHeart, i*60);
-  }
-}
-
-// 中间弹一句情话大字
-function showBigLove(text){
-  const el = document.createElement('div');
-  el.textContent = text;
-  el.style.cssText = `
-    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);
-    color:#fff;font-size:48px;font-weight:bold;z-index:9999;
-    text-shadow:0 0 30px #ff6ec7,0 0 60px #00e5ff;
-    animation:pop 2.5s ease-out forwards;pointer-events:none;
-    background:rgba(0,0,0,.3);padding:30px 50px;border-radius:30px;
-    backdrop-filter:blur(4px);
-  `;
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(), 2500);
-}
-</script>
-
-<style>
-@keyframes pop{
-  0%{transform:translate(-50%,-50%) scale(0);opacity:0;}
-  20%{transform:translate(-50%,-50%) scale(1.1);opacity:1;}
-  80%{transform:translate(-50%,-50%) scale(1);opacity:1;}
-  100%{transform:translate(-50%,-60%) scale(1);opacity:0;}
-}
-</style>
-
 </body>
 </html>
