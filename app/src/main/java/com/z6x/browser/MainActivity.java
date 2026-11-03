@@ -1,100 +1,101 @@
 package com.z6x.browser;
 
 import android.annotation.SuppressLint;
-import android.graphics.Color;
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+@SuppressLint("SetJavaScriptEnabled")
+public class MainActivity extends Activity {
+
     private WebView web;
     private FrameLayout root;
-    private LinearLayout keyboard;
-    private TextView address;
     private View cursor;
-    private int px = 100, py = 100;
-    private int mode = 0; // 0:鼠标 1:滚动 2:键盘 3:浏览
-    private int uaMode = 0; // 0:手机 1:桌面 2:iPad
-    private boolean incognito = false;
-    
-    private final String UA_DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-    private final String UA_IPAD = "Mozilla/5.0 (iPad; CPU OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1";
+    private int px = 300, py = 300;
+    private int mode = 0; // 0:光标 1:网页 2:滚动 3:键盘
+    private Handler handler = new Handler();
+    private FrameLayout fullscreen;
 
-    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    private static final String UA_DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36";
+    private static final String UA_IPAD = "Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        root = new FrameLayout(this);
+        setContentView(root);
 
-        root = findViewById(R.id.root);
-        web = findViewById(R.id.web);
-        keyboard = findViewById(R.id.keyboard);
-        address = findViewById(R.id.address);
+        setupWebView();
+        setupCursor();
+        
+        // 加载主页
+        web.loadUrl("file:///android_asset/home.html");
+    }
 
-        // ★★★ 修复闪屏：禁用硬件加速，设置透明背景 ★★★
-        web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        web.setBackgroundColor(Color.TRANSPARENT);
-
-        // ★★★ 修复点击 & 认证：补全所有必要 WebView 设置 ★★★
+    private void setupWebView() {
+        web = new WebView(this);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT);
+        web.setLayoutParams(lp);
+        
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
         s.setAllowFileAccess(true);
         s.setAllowUniversalAccessFromFileURLs(true);
         s.setAllowContentAccess(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setSupportZoom(true);
-        s.setBuiltInZoomControls(true);
+        s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // 开启第三方 Cookie（过年龄验证必须）
-        CookieManager cm = CookieManager.getInstance();
-        cm.setAcceptCookie(true);
-        cm.setAcceptThirdPartyCookies(web, true);
+        // 默认使用手机UA，兼容性好
+        s.setUserAgentString("Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36");
 
-        applyUA();
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
 
-        // 自定义 WebViewClient 处理跳转和自动点击验证
         web.setWebViewClient(new WebViewClient() {
             @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                // ★★★ 自动尝试点击常见验证按钮 (Cloudflare/年龄确认等) ★★★
-                String autoClickJs = "javascript:(function(){" +
-                    "var btns = document.querySelectorAll('button, a, input[type=submit], .button');" +
-                    "for(var i=0; i<btns.length; i++){" +
-                    "   var txt = (btns[i].innerText || btns[i].value || btns[i].getAttribute('aria-label') || '').toLowerCase();" +
-                    "   if(txt.includes('weitermachen') || txt.includes('enter') || txt.includes('continue') || txt.includes('accept') || txt.includes('verify') || txt.includes('confirm') || txt.includes('check')){" +
-                    "       btns[i].click();" +
-                    "   }" +
-                    "}" +
-                    "})()";
-                web.evaluateJavascript(autoClickJs, null);
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme();
+                if ("z6x".equals(scheme)) {
+                    handleZ6XProtocol(uri);
+                    return true;
+                }
+                return false;
             }
         });
 
         web.setWebChromeClient(new WebChromeClient() {
             @Override
-            public void onShowCustomView(View v, CustomViewCallback cb) {
-                root.addView(v, new FrameLayout.LayoutParams(-1, -1));
-                fullscreen = v;
-                fullscreenCallback = cb;
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                fullscreen = new FrameLayout(MainActivity.this);
+                fullscreen.setLayoutParams(new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                fullscreen.addView(view);
+                root.addView(fullscreen);
+                fullscreenCallback = callback;
             }
             @Override
             public void onHideCustomView() {
@@ -102,39 +103,90 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 初始化主页
-        web.loadUrl("file:///android_asset/home.html");
-
-        // 初始化光标
-        cursor = new View(this);
-        cursor.setBackgroundResource(R.drawable.cursor_fish); // 需确保有此资源，或用系统箭头
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(dp(40), dp(40));
-        cp.leftMargin = px;
-        cp.topMargin = py;
-        root.addView(cursor, cp);
-
-        setupKeyboard();
+        root.addView(web);
     }
 
-    // ★★★ 核心修复：用 JS 注入模拟真实点击，解决网页拦截 ★★★
+    private void setupCursor() {
+        cursor = new View(this);
+        cursor.setBackgroundResource(android.R.drawable.ic_menu_send); // 临时用系统图标代替🐟
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(dp(32), dp(32));
+        cursor.setLayoutParams(cp);
+        cursor.setVisibility(View.GONE);
+        root.addView(cursor);
+    }
+
+    private void handleZ6XProtocol(Uri uri) {
+        String host = uri.getHost();
+        if ("search".equals(host)) {
+            String q = uri.getQueryParameter("q");
+            if (q != null) {
+                web.loadUrl("https://m.baidu.com/s?word=" + Uri.encode(q));
+            }
+        } else if ("open".equals(host)) {
+            String url = uri.getQueryParameter("url");
+            if (url != null) {
+                web.loadUrl(url);
+            }
+        }
+    }
+
+    private WebChromeClient.CustomViewCallback fullscreenCallback;
+
+    private void hideVideo() {
+        if (fullscreen != null) {
+            root.removeView(fullscreen);
+            fullscreen = null;
+            if (fullscreenCallback != null) {
+                fullscreenCallback.onCustomViewHidden();
+                fullscreenCallback = null;
+            }
+        }
+    }
+
+    private int dp(int v) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(v * density);
+    }
+
+    private void position() {
+        if (cursor == null) return;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) cursor.getLayoutParams();
+        lp.leftMargin = px;
+        lp.topMargin = py;
+        cursor.setLayoutParams(lp);
+    }
+
+    // JS注入点击（修复网页拦截问题）
     private void jsClickAt(int x, int y) {
         String js = "javascript:(function(){" +
-            "var elements = document.elementsFromPoint(" + x + ", " + y + ");" +
-            "for(var i=0; i<elements.length; i++){" +
-            "   var el = elements[i];" +
-            "   if(el.tagName === 'BUTTON' || el.tagName === 'A' || el.onclick || getComputedStyle(el).cursor === 'pointer'){" +
-            "       var ev = document.createEvent('HTMLEvents');" +
-            "       ev.initEvent('click', true, true);" +
-            "       el.dispatchEvent(ev);" +
-            "       break;" +
-            "   }" +
-            "}" +
-            "})()";
+                "var elements = document.elementsFromPoint(" + x + ", " + y + ");" +
+                "for(var i=0; i<elements.length; i++){" +
+                "   if(elements[i].tagName === 'BUTTON' || elements[i].tagName === 'A' || elements[i].onclick){" +
+                "       var ev = document.createEvent('HTMLEvents');" +
+                "       ev.initEvent('click', true, true);" +
+                "       elements[i].dispatchEvent(ev);" +
+                "       break;" +
+                "   }" +
+                "}" +
+                "})()";
         web.evaluateJavascript(js, null);
+    }
+
+    private void switchMode() {
+        mode = (mode + 1) % 4;
+        String msg = "";
+        switch (mode) {
+            case 0: msg = "光标模式"; cursor.setVisibility(View.VISIBLE); break;
+            case 1: msg = "网页模式"; cursor.setVisibility(View.GONE); web.requestFocus(); break;
+            case 2: msg = "滚动模式"; cursor.setVisibility(View.VISIBLE); break;
+            case 3: msg = "键盘模式"; cursor.setVisibility(View.GONE); break;
+        }
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
+        if (fullscreen != null) return super.dispatchKeyEvent(e);
         if (mode == 3) return super.dispatchKeyEvent(e);
 
         int k = e.getKeyCode();
@@ -142,23 +194,22 @@ public class MainActivity extends AppCompatActivity {
             switchMode();
             return true;
         }
-        if (mode == 2) return super.dispatchKeyEvent(e); // 键盘模式
+        if (mode == 2) return super.dispatchKeyEvent(e);
         if (k == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
 
-        // 确认键 / 方向键处理
+        // 确认键：JS注入点击
         if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER) {
             if (e.getAction() == KeyEvent.ACTION_UP) {
-                if (mode == 1) {
-                    mode = 0;
+                if (mode == 0) {
+                    mode = 1;
                     position();
-                } else {
-                    // 移动光标后按确认，注入JS点击
                     jsClickAt(px + dp(2), py + dp(2));
                 }
             }
             return true;
         }
 
+        // 方向键移动光标
         if (k >= KeyEvent.KEYCODE_DPAD_UP && k <= KeyEvent.KEYCODE_DPAD_RIGHT) {
             if (e.getAction() == KeyEvent.ACTION_DOWN) {
                 int d = dp(e.getRepeatCount() > 4 ? 34 : 17);
@@ -180,70 +231,42 @@ public class MainActivity extends AppCompatActivity {
         return super.dispatchKeyEvent(e);
     }
 
-    // 处理自定义协议跳转 (修复主页搜索)
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        if (url.startsWith("z6x://")) {
-            try {
-                android.net.Uri uri = android.net.Uri.parse(url);
-                String host = uri.getHost();
-                if ("open".equals(host)) {
-                    String target = uri.getQueryParameter("url");
-                    if (target != null) view.loadUrl(target);
-                    return true;
-                } else if ("search".equals(host)) {
-                    String q = uri.getQueryParameter("q");
-                    if (q != null && q.length() > 0) {
-                        String baidu = "https://m.baidu.com/s?wd=" + java.net.URLEncoder.encode(q, "UTF-8");
-                        view.loadUrl(baidu);
-                    }
-                    return true;
-                }
-            } catch (Exception e) { e.printStackTrace(); }
-            return true;
-        }
-        return false;
-    }
-
-    private void applyUA() {
-        WebSettings s = web.getSettings();
-        if (uaMode == 1) s.setUserAgentString(UA_DESKTOP);
-        else if (uaMode == 2) s.setUserAgentString(UA_IPAD);
-        else s.setUserAgentString(null); // 默认系统手机UA
-    }
-
-    private void switchMode() {
-        mode = (mode + 1) % 4;
-        // 更新UI状态...
-    }
-
-    private void position() {
-        if (cursor != null) {
-            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) cursor.getLayoutParams();
-            lp.leftMargin = px;
-            lp.topMargin = py;
-            cursor.setLayoutParams(lp);
-        }
-    }
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
-    }
-
     @Override
     public void onBackPressed() {
-        if (web != null && web.canGoBack() && mode != 2) {
+        if (fullscreen != null) {
+            hideVideo();
+            return;
+        }
+        if (mode != 0) {
+            mode = 0;
+            cursor.setVisibility(View.VISIBLE);
+            return;
+        }
+        if (web != null && web.canGoBack()) {
             web.goBack();
         } else {
             super.onBackPressed();
         }
     }
-    
-    private View fullscreen = null;
-    private WebChromeClient.CustomViewCallback fullscreenCallback = null;
-    private void hideVideo() { /* ... 保持原样 ... */ }
-    private void setupKeyboard() { /* ... 保持原样 ... */ }
-    @Override protected void onPause() { if(web!=null) web.onPause(); super.onPause(); }
-    @Override protected void onResume() { if(web!=null) web.onResume(); super.onResume(); }
-    @Override protected void onDestroy() { if(web!=null) web.destroy(); super.onDestroy(); }
+
+    @Override
+    protected void onPause() {
+        if (web != null) web.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        if (web != null) web.onResume();
+        super.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (web != null) {
+            web.destroy();
+            web = null;
+        }
+        super.onDestroy();
+    }
 }
