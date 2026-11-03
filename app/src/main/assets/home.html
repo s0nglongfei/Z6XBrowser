@@ -2,433 +2,130 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>鱼鱼的专属浏览器 🐟</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>鱼鱼的深海浏览器</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
+/* ★★★ 修复点击失效：强制开启所有指针事件 ★★★ */
+* { pointer-events: auto !important; -webkit-tap-highlight-color: rgba(0,0,0,0.2); }
 body {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    font-family: 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(180deg, #0a0e27 0%, #1a1b4b 30%, #0d2149 60%, #0a1628 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    cursor: none; /* 隐藏默认光标，用自定义拖尾 */
+    margin: 0; padding: 0; background: linear-gradient(135deg, #0a0a2a, #1a1a4a, #2a1a5a);
+    color: #fff; font-family: sans-serif; text-align: center; overflow: hidden;
+    background-attachment: fixed;
 }
-
-/* 星空 */
-.stars {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none;
-}
-.star {
-    position: absolute;
-    width: 2px; height: 2px;
-    background: #fff;
-    border-radius: 50%;
-    animation: twinkle 3s infinite;
-}
-@keyframes twinkle { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
-
-/* 爱心雨 */
-.hearts {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none;
-    overflow: hidden;
-}
-.heart {
-    position: absolute;
-    color: rgba(255, 100, 150, 0.8);
-    font-size: 20px;
-    animation: fall linear infinite;
-}
-@keyframes fall {
-    0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
-}
-
-/* 主标题 */
-.title {
-    font-size: 52px;
-    font-weight: bold;
-    background: linear-gradient(135deg, #00e5ff, #ff6699, #ffd700);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 30px rgba(0,229,255,0.3);
-    margin-bottom: 8px;
-    z-index: 10;
-    animation: glow 3s ease-in-out infinite alternate;
-}
-@keyframes glow {
-    0% { filter: drop-shadow(0 0 10px rgba(0,229,255,0.5)); }
-    100% { filter: drop-shadow(0 0 25px rgba(255,102,153,0.5)); }
-}
-
-.subtitle {
-    font-size: 18px;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 40px;
-    z-index: 10;
-}
-
-/* 搜索区 - 毛玻璃 */
-.search-container {
-    z-index: 10;
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 50px;
-    padding: 8px 20px;
-    display: flex;
-    align-items: center;
-    width: 70%;
-    max-width: 600px;
-    margin-bottom: 24px;
-}
-.search-container input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: #fff;
-    font-size: 22px;
-    padding: 12px 16px;
-    text-align: center;
-}
-.search-container input::placeholder {
-    color: rgba(255,255,255,0.4);
-}
-.search-btn {
-    background: linear-gradient(135deg, #00e5ff, #0099ff);
-    border: none;
-    border-radius: 30px;
-    padding: 10px 24px;
-    color: #000;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-.search-btn:active { transform: scale(0.95); }
-
-/* 快捷按钮 */
-.quick-bar {
-    z-index: 10;
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-.quick-btn {
-    border: none;
-    border-radius: 25px;
-    padding: 10px 22px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.quick-btn:active { transform: scale(0.9); }
-.btn-baidu { background: linear-gradient(135deg, #00e5ff, #0099ff); color: #000; }
-.btn-bili { background: linear-gradient(135deg, #ff6699, #ff3366); color: #fff; }
-.btn-douyin { background: linear-gradient(135deg, #fff, #ddd); color: #000; }
-.btn-yuyu {
-    background: linear-gradient(135deg, #ff69b4, #ff1493);
-    color: #fff;
-    animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0%,100% { box-shadow: 0 0 10px rgba(255,105,180,0.5); }
-    50% { box-shadow: 0 0 25px rgba(255,105,180,0.9); }
-}
-
-/* 暗号彩蛋 */
-.easter-egg {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    font-size: 80px;
-    z-index: 999;
-    pointer-events: none;
-    transition: transform 0.5s;
-}
-.easter-egg.show {
-    transform: translate(-50%, -50%) scale(1);
-    animation: heartBurst 2s forwards;
-}
-@keyframes heartBurst {
-    0% { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
-    50% { opacity: 1; transform: translate(-50%,-50%) scale(1.5); }
-    100% { opacity: 0; transform: translate(-50%,-50%) scale(2); }
-}
-
-/* 情话 */
-.love-quote {
-    position: fixed;
-    bottom: 5%;
-    left: 50%;
-    transform: translateX(-50%);
-    color: rgba(255,255,255,0.6);
-    font-size: 14px;
-    z-index: 10;
-    text-align: center;
-    max-width: 80%;
-}
-
-/* ========== 鼠标拖尾粒子 ========== */
-.trail-particle {
-    position: fixed;
-    pointer-events: none;
-    border-radius: 50%;
-    z-index: 9999;
-    animation: trailFade 0.8s ease-out forwards;
-}
-@keyframes trailFade {
-    0% { opacity: 1; transform: scale(1) translateY(0); }
-    100% { opacity: 0; transform: scale(0.3) translateY(-20px); }
-}
-
-/* ========== 点击波纹 ========== */
-.click-ripple {
-    position: fixed;
-    pointer-events: none;
-    border-radius: 50%;
-    border: 2px solid rgba(0, 229, 255, 0.8);
-    z-index: 9998;
-    animation: rippleExpand 0.6s ease-out forwards;
-}
-@keyframes rippleExpand {
-    0% { width: 0; height: 0; opacity: 1; margin-left: 0; margin-top: 0; }
-    100% { width: 120px; height: 120px; opacity: 0; margin-left: -60px; margin-top: -60px; }
-}
-
-/* ========== 点击爆花粒子 ========== */
-.burst-particle {
-    position: fixed;
-    pointer-events: none;
-    z-index: 9999;
-    font-size: 20px;
-    animation: burstFly 0.8s ease-out forwards;
-}
-@keyframes burstFly {
-    0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
-    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg); }
-}
-
-/* 自定义光标（小爱心） */
-.custom-cursor {
-    position: fixed;
-    pointer-events: none;
-    z-index: 10000;
-    font-size: 24px;
-    transform: translate(-50%, -50%);
-    transition: transform 0.05s;
-}
+#stars { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+.star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle 3s infinite; }
+@keyframes twinkle { 0%,100%{opacity:0.2;} 50%{opacity:1;} }
+#hearts { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+.heart { position: absolute; top: -20px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+.container { position: relative; z-index: 10; padding-top: 15vh; }
+h1 { font-size: 32px; text-shadow: 0 0 15px #ff69b4; margin-bottom: 5px; }
+p.sub { color: #aaa; margin-bottom: 30px; font-size: 14px; }
+.search-box { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 15px; border-radius: 20px; width: 80%; max-width: 400px; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+input { width: 90%; padding: 12px; border: none; border-radius: 10px; background: rgba(255,255,255,0.9); font-size: 16px; outline: none; }
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+button { background: linear-gradient(45deg, #ff69b4, #ff1493); color: #fff; border: none; padding: 12px 20px; border-radius: 10px; font-size: 16px; cursor: pointer !important; box-shadow: 0 4px 10px rgba(255,20,147,0.4); transition: transform 0.2s; }
+button:active { transform: scale(0.95); }
+.shortcuts { margin-top: 30px; }
+.shortcuts span { display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; margin: 5px; cursor: pointer !important; font-size: 14px; }
+#egg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 80px; z-index: 999; transition: transform 0.3s; pointer-events:none; }
+#egg.show { transform: translate(-50%, -50%) scale(1); }
+#quote { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #888; font-size: 13px; z-index: 10; }
+/* 自定义光标 & 拖尾 */
+body { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">🐟</text></svg>'), auto; }
+.trail { position: fixed; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: fadeOut 0.8s forwards; z-index: 9999; }
+@keyframes fadeOut { to { opacity: 0; transform: scale(2); } }
+.click-ripple { position: fixed; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #0ff; animation: ripple 0.6s forwards; pointer-events: none; z-index: 9999; }
+@keyframes ripple { to { width: 100px; height: 100px; opacity: 0; margin: -40px; } }
 </style>
 </head>
 <body>
-
-<!-- 星空 -->
-<div class="stars" id="stars"></div>
-
-<!-- 爱心雨 -->
-<div class="hearts" id="hearts"></div>
-
-<!-- 主标题 -->
-<div class="title">🐟 鱼鱼的专属浏览器</div>
-<div class="subtitle">~ 鱼鱼说的算 ~</div>
-
-<!-- 搜索 -->
-<div class="search-container">
-    <input id="kw" type="text" placeholder="鱼鱼想搜点啥～" />
-    <button class="search-btn" onclick="doSearch()">🔍 搜索</button>
+<div id="stars"></div><div id="hearts"></div>
+<div class="container">
+    <h1>🌊 鱼鱼的深海</h1>
+    <p class="sub">"不管搜什么，最好的结果都是你"</p>
+    
+    <div class="search-box">
+        <input type="text" id="kw" placeholder="鱼鱼想搜什么？" autocomplete="off">
+        <div class="btn-row">
+            <button onclick="doSearch()">🔍 百度一下</button>
+            <button onclick="yuyuSays()" style="background:linear-gradient(45deg,#00ced1,#1e90ff);">🐟 鱼鱼说的算</button>
+        </div>
+    </div>
+    
+    <div class="shortcuts">
+        <span onclick="quickOpen('https://m.baidu.com')">🟦 百度</span>
+        <span onclick="quickOpen('https://m.bilibili.com')">📺 B站</span>
+        <span onclick="quickOpen('https://m.douyin.com')">🎵 抖音</span>
+    </div>
 </div>
 
-<!-- 快捷入口 -->
-<div class="quick-bar">
-    <button class="quick-btn btn-baidu" onclick="quickOpen('https://m.baidu.com')">🔍 百度</button>
-    <button class="quick-btn btn-bili" onclick="quickOpen('https://m.bilibili.com')">📺 B站</button>
-    <button class="quick-btn btn-douyin" onclick="quickOpen('https://www.douyin.com')">🎵 抖音</button>
-    <button class="quick-btn btn-yuyu" onclick="yuyuSays()">💖 鱼鱼说的算</button>
-</div>
-
-<!-- 彩蛋 -->
-<div class="easter-egg" id="egg">💖</div>
-
-<!-- 情话 -->
-<div class="love-quote" id="quote">"在深海的每一颗星星，都替我说了一句爱你"</div>
-
-<!-- 自定义光标 -->
-<div class="custom-cursor" id="cursor">🐟</div>
+<div id="egg"></div>
+<div id="quote">"在深海的每一颗星星，都替我说了一句爱你"</div>
 
 <script>
-// ========== 星空 ==========
+// 星星背景
 (function(){
     var s = document.getElementById('stars');
-    for(var i=0;i<80;i++){
+    for(var i=0; i<50; i++){
         var star = document.createElement('div');
         star.className = 'star';
         star.style.left = Math.random()*100+'%';
         star.style.top = Math.random()*100+'%';
+        star.style.width = star.style.height = (Math.random()*3+1)+'px';
         star.style.animationDelay = Math.random()*3+'s';
         s.appendChild(star);
     }
 })();
 
-// ========== 爱心雨 ==========
+// 爱心雨
 (function(){
     var h = document.getElementById('hearts');
-    function dropHeart(){
+    setInterval(function(){
         var heart = document.createElement('div');
         heart.className = 'heart';
-        heart.innerHTML = ['💖','💕','💗','🐟','❤️'][Math.floor(Math.random()*5)];
+        heart.innerHTML = ['💖','💕','💗','🐟','❤️'][Math.random()*5];
         heart.style.left = Math.random()*100+'%';
         heart.style.fontSize = (Math.random()*20+14)+'px';
         heart.style.animationDuration = (Math.random()*5+5)+'s';
         h.appendChild(heart);
         setTimeout(function(){heart.remove();}, 10000);
-    }
-    setInterval(dropHeart, 500);
+    }, 500);
 })();
 
-// ========== 鼠标拖尾 ==========
-(function(){
-    var trailColors = ['#00e5ff', '#ff6699', '#ffd700', '#ff69b4', '#00ffcc', '#ffffff'];
-    var lastTrailTime = 0;
-    
-    document.addEventListener('mousemove', function(e){
-        var now = Date.now();
-        // 限制拖尾生成频率（每30ms一个）
-        if(now - lastTrailTime < 30) return;
-        lastTrailTime = now;
-        
-        var particle = document.createElement('div');
-        particle.className = 'trail-particle';
-        
-        var size = Math.random() * 8 + 4; // 4-12px
-        particle.style.width = size + 'px';
-        particle.style.height = size + 'px';
-        particle.style.left = e.clientX - size/2 + 'px';
-        particle.style.top = e.clientY - size/2 + 'px';
-        
-        var color = trailColors[Math.floor(Math.random() * trailColors.length)];
-        particle.style.background = 'radial-gradient(circle, ' + color + ', transparent)';
-        particle.style.boxShadow = '0 0 ' + (size*2) + 'px ' + color;
-        
-        document.body.appendChild(particle);
-        
-        // 动画结束后移除
-        setTimeout(function(){ particle.remove(); }, 800);
-    });
-})();
-
-// ========== 自定义光标跟随 ==========
-(function(){
-    var cursor = document.getElementById('cursor');
-    document.addEventListener('mousemove', function(e){
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-    });
-})();
-
-// ========== 点击特效 ==========
-(function(){
-    var burstEmojis = ['💖','💕','✨','🐟','⭐','💫','🌟'];
-    
-    document.addEventListener('click', function(e){
-        // 1. 波纹效果
-        var ripple = document.createElement('div');
-        ripple.className = 'click-ripple';
-        ripple.style.left = e.clientX + 'px';
-        ripple.style.top = e.clientY + 'px';
-        document.body.appendChild(ripple);
-        setTimeout(function(){ ripple.remove(); }, 600);
-        
-        // 2. 爆花粒子（6-8个）
-        var particleCount = 6 + Math.floor(Math.random() * 3);
-        for(var i=0; i<particleCount; i++){
-            var burst = document.createElement('div');
-            burst.className = 'burst-particle';
-            burst.innerHTML = burstEmojis[Math.floor(Math.random() * burstEmojis.length)];
-            burst.style.left = e.clientX + 'px';
-            burst.style.top = e.clientY + 'px';
-            
-            // 随机方向
-            var angle = (Math.PI * 2 / particleCount) * i + (Math.random() * 0.5);
-            var distance = 40 + Math.random() * 60;
-            var tx = Math.cos(angle) * distance;
-            var ty = Math.sin(angle) * distance;
-            
-            burst.style.setProperty('--tx', tx + 'px');
-            burst.style.setProperty('--ty', ty + 'px');
-            
-            document.body.appendChild(burst);
-            setTimeout(function(){ burst.remove(); }, 800);
-        }
-    });
-})();
-
-// ========== 搜索 ==========
+// 搜索跳转逻辑 (修复版)
 function doSearch(){
     var kw = document.getElementById('kw').value.trim();
-    if(!kw){
-        location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
-        return;
-    }
-    location.href = 'z6x://search?q=' + encodeURIComponent(kw);
+    if(!kw) location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
+    else location.href = 'z6x://search?q=' + encodeURIComponent(kw);
 }
-
 document.getElementById('kw').addEventListener('keydown', function(e){
     if(e.key === 'Enter') doSearch();
 });
 
-// ========== 快捷打开 ==========
 function quickOpen(url){
     location.href = 'z6x://open?url=' + encodeURIComponent(url);
 }
 
-// ========== 鱼鱼说的算 ==========
 function yuyuSays(){
     var kw = document.getElementById('kw').value.trim();
-    if(kw){
-        showEgg('💖');
-        setTimeout(function(){
-            location.href = 'z6x://search?q=' + encodeURIComponent('鱼鱼说搜：' + kw);
-        }, 800);
-    } else {
-        showEgg('🐟');
-        setTimeout(function(){
-            location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
-        }, 800);
-    }
+    showEgg('💖');
+    setTimeout(function(){
+        if(kw) location.href = 'z6x://search?q=' + encodeURIComponent('鱼鱼说搜：' + kw);
+        else location.href = 'z6x://open?url=' + encodeURIComponent('https://m.baidu.com');
+    }, 500);
 }
 
-// ========== 彩蛋 ==========
+// 彩蛋
 var secretInput = '';
 var eggTriggers = ['鱼鱼','yuyu','iloveyou','我爱你','老公','老婆'];
-
 document.addEventListener('keydown', function(e){
     secretInput += e.key.toLowerCase();
     if(secretInput.length > 20) secretInput = secretInput.slice(-20);
-
     eggTriggers.forEach(function(trigger){
-        if(secretInput.includes(trigger)){
-            showEgg('💖');
-            secretInput = '';
-            return;
-        }
+        if(secretInput.includes(trigger)){ showEgg('💖'); secretInput = ''; }
     });
 });
-
 function showEgg(emoji){
     var egg = document.getElementById('egg');
     egg.innerHTML = emoji;
@@ -436,19 +133,32 @@ function showEgg(emoji){
     setTimeout(function(){ egg.classList.remove('show'); }, 2000);
 }
 
-// ========== 情话轮播 ==========
+// 情话轮播
 var quotes = [
     '"在深海的每一颗星星，都替我说了一句爱你"',
     '"鱼鱼想搜什么，浏览器就搜什么"',
     '"你是我代码里唯一的 bug，也是唯一的 feature"',
-    '"不管搜什么，最好的结果都是你"',
-    '"今天的风是甜的，因为你说了算"'
+    '"不管搜什么，最好的结果都是你"'
 ];
 var qi = 0;
-setInterval(function(){
-    qi = (qi+1) % quotes.length;
-    document.getElementById('quote').innerHTML = quotes[qi];
-}, 5000);
+setInterval(function(){ qi = (qi+1)%quotes.length; document.getElementById('quote').innerHTML = quotes[qi]; }, 5000);
+
+// 鼠标拖尾 & 点击特效
+document.addEventListener('mousemove', function(e){
+    var t = document.createElement('div');
+    t.className = 'trail';
+    t.style.left = e.clientX+'px'; t.style.top = e.clientY+'px';
+    t.style.background = ['#0ff','#f0f','#ff0','#fff'][Math.floor(Math.random()*4)];
+    document.body.appendChild(t);
+    setTimeout(function(){t.remove();}, 800);
+});
+document.addEventListener('click', function(e){
+    var r = document.createElement('div');
+    r.className = 'click-ripple';
+    r.style.left = e.clientX+'px'; r.style.top = e.clientY+'px';
+    document.body.appendChild(r);
+    setTimeout(function(){r.remove();}, 600);
+});
 </script>
 </body>
 </html>
