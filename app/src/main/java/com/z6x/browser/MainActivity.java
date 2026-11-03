@@ -112,7 +112,9 @@ public class MainActivity extends Activity {
     }
 
     public void onCreate(Bundle b) {
-        super.onCreate(b);
+    super.onCreate(b);
+    try {   
+
         getWindow().setFlags(1024, 1024);   // FLAG_FULLSCREEN
         root = new FrameLayout(this);
         setContentView(root);
@@ -296,7 +298,11 @@ web.setOnTouchListener(new View.OnTouchListener() {
         hideIME();
         updateIncognitoButton();
         updateUAButton();
-    }
+    } catch (Throwable e) {         // ✅ 加的
+        e.printStackTrace();
+        Toast.makeText(this, "启动出错：" + e.getMessage(), Toast.LENGTH_LONG).show();
+    }                              // ✅ 加的
+}
 
     /** WebView 基础设置（视频播放相关） */
     void setupWebViewSettings() {
